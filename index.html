@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pluviómetro IoT · EET 3169</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--primary:#0ea5e9;--primary-dark:#0284c7;--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--success:#10b981;--danger:#ef4444;--border:#e2e8f0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+.header{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;padding:1rem 1.5rem;box-shadow:0 4px 20px rgba(14,165,233,.25)}
+.header-content{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.header-text h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+.header-text p{opacity:.9;font-size:.9rem;margin-top:.2rem}
+.logo{height:144px;width:auto;border-radius:8px;background:rgba(255,255,255,.95);padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.container{max-width:900px;margin:0 auto;padding:1.25rem}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:1.5rem 0}
+.kpi{background:var(--card);border-radius:16px;padding:1.25rem;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid var(--border);text-align:center}
+.kpi .label{font-size:.8rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.kpi .value{font-size:1.9rem;font-weight:700;color:var(--primary-dark);margin:.35rem 0}
+.kpi .unit{font-size:.85rem;color:var(--muted)}
+.card{background:var(--card);border-radius:16px;padding:1.5rem;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid var(--border);margin-bottom:1.5rem}
+.card h2{font-size:1.15rem;font-weight:600;margin-bottom:1rem}
+.status-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;font-size:.9rem}
+.status-dot{display:inline-flex;align-items:center;gap:.4rem;font-weight:500}
+.status-dot::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px rgba(16,185,129,.25)}
+.status-dot.offline::before{background:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.25)}
+.battery-wrap{display:inline-flex;align-items:center;gap:.5rem;font-size:.9rem;font-weight:500}
+.battery-icon{width:28px;height:14px;border:2px solid currentColor;border-radius:3px;position:relative;padding:1px}
+.battery-icon::after{content:'';position:absolute;right:-5px;top:2px;width:3px;height:6px;background:currentColor;border-radius:0 2px 2px 0}
+.battery-level{height:100%;border-radius:1px;transition:width .3s,background .3s}
+.battery-level.ok{background:#10b981}
+.battery-level.mid{background:#f59e0b}
+.battery-level.low{background:#ef4444}
+.btn{background:var(--danger);color:#fff;border:none;padding:.6rem 1.2rem;font-size:.9rem;font-weight:600;border-radius:10px;cursor:pointer}
+.btn-download{background:#059669}
+.btn-group{display:flex;gap:.6rem;flex-wrap:wrap}
+canvas{width:100%!important;max-height:340px}
+.footer{text-align:center;padding:1.5rem;font-size:.8rem;color:var(--muted)}
+@media(max-width:600px){.header-content{flex-direction:column;text-align:center}.logo{height:120px}.header-text h1{font-size:1.25rem}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-content">
+    <div class="header-text">
+      <h1>Pluviómetro IoT</h1>
+      <p>Estación Meteorológica · EET N° 3169 Campo Santo</p>
+    </div>
+    <img src="data:image/jpeg;base64,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" class="logo" alt="Logo EET 3169">
+  </div>
+</div>
+<div class="container">
+  <div class="status-bar">
+    <div class="status-dot" id="status">Conectando...</div>
+    <div class="battery-wrap" id="batteryWrap" title="Nivel de la batería LiPo">
+      <span style="color:var(--muted);font-size:0.8rem;font-weight:600;">Batería</span>
+      <div class="battery-icon"><div class="battery-level ok" id="batteryLevel" style="width:0%"></div></div>
+      <span id="batteryText">--%</span>
+    </div>
+    <div style="color:var(--muted)" id="timestamp">—</div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="label">Acumulado Total</div><div class="value" id="mmTotal">--</div><div class="unit">mm</div></div>
+    <div class="kpi"><div class="label">Hoy</div><div class="value" id="mmHoy">--</div><div class="unit">mm</div></div>
+    <div class="kpi"><div class="label">Últimos 7 días</div><div class="value" id="mm7">--</div><div class="unit">mm</div></div>
+    <div class="kpi"><div class="label">Días con lluvia</div><div class="value" id="diasLluvia">--</div><div class="unit">días</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.75rem">
+      <h2 style="margin:0">Histórico de Precipitación</h2>
+      <div class="btn-group">
+        <button class="btn btn-download" onclick="descargarCSV()">Descargar CSV</button>
+      </div>
+    </div>
+    <canvas id="graficoLluvia"></canvas>
+  </div>
+</div>
+<div class="footer">Desarrollado en la EET N° 3169 Galileo Galilei · Campo Santo</div>
+<script>
+// ========== CONFIGURACIÓN ==========
+// Pegá aquí la URL de lectura de tu bin en JSONBin.io
+// Ejemplo: https://api.jsonbin.io/v3/b/TU_BIN_ID/latest
+const DATA_URL = "https://api.jsonbin.io/v3/b/PEGAR_AQUI_TU_BIN_ID/latest";
+// Si el bin es privado, poné la X-Access-Key (solo lectura). Si es público, dejá vacío.
+const READ_KEY = "";
+// ===================================
+
+let miGrafico = null;
+let ultimoHistorial = [];
+
+function inicializarGrafico() {
+  const ctx = document.getElementById('graficoLluvia').getContext('2d');
+  miGrafico = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'mm',
+        data: [],
+        backgroundColor: 'rgba(14,165,233,0.75)',
+        borderColor: 'rgba(2,132,199,1)',
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8 }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 }, color: '#64748b' } },
+        y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 11 }, color: '#64748b' }, title: { display: true, text: 'mm', color: '#64748b' } }
+      }
+    }
+  });
+}
+
+function actualizarDatos() {
+  const headers = { "Content-Type": "application/json" };
+  if (READ_KEY) headers["X-Access-Key"] = READ_KEY;
+
+  fetch(DATA_URL, { headers })
+    .then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(payload => {
+      // JSONBin envuelve los datos en .record
+      const data = payload.record || payload;
+
+      document.getElementById('mmTotal').innerText = Number(data.mmAcumulado || 0).toFixed(1);
+      document.getElementById('mmHoy').innerText = Number(data.mmHoy || 0).toFixed(1);
+      document.getElementById('mm7').innerText = Number(data.mm7 || 0).toFixed(1);
+      document.getElementById('diasLluvia').innerText = data.diasLluvia || 0;
+      document.getElementById('timestamp').innerText = data.timestamp || "—";
+
+      const statusEl = document.getElementById('status');
+      statusEl.classList.remove('offline');
+      statusEl.innerText = "Sistema Online";
+
+      const pct = Number(data.bateria || 0);
+      const batEl = document.getElementById('batteryLevel');
+      document.getElementById('batteryText').innerText = pct + "%";
+      batEl.style.width = pct + "%";
+      batEl.className = "battery-level " + (pct > 50 ? "ok" : pct > 20 ? "mid" : "low");
+
+      ultimoHistorial = data.historial || [];
+      miGrafico.data.labels = ultimoHistorial.map(h => h.fecha);
+      miGrafico.data.datasets[0].data = ultimoHistorial.map(h => h.mm);
+      miGrafico.update("none");
+    })
+    .catch(err => {
+      console.error(err);
+      const statusEl = document.getElementById("status");
+      statusEl.classList.add("offline");
+      statusEl.innerText = "Sin datos del sensor";
+    });
+}
+
+function descargarCSV() {
+  if (!ultimoHistorial.length) {
+    alert("No hay datos para descargar todavía.");
+    return;
+  }
+  let csv = "Fecha,mm\n";
+  ultimoHistorial.forEach(h => {
+    if (h.fecha && h.fecha !== "-") {
+      csv += h.fecha + "," + Number(h.mm).toFixed(2) + "\n";
+    }
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "pluviometro_eet3169.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.onload = function () {
+  inicializarGrafico();
+  actualizarDatos();
+  setInterval(actualizarDatos, 10000); // cada 10 s
+};
+</script>
+</body>
+</html>
