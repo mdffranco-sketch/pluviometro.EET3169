@@ -131,35 +131,59 @@ function actualizarDatos() {
       return r.json();
     })
     .then(payload => {
-      // JSONBin envuelve los datos en .record
       const data = payload.record || payload;
 
-      document.getElementById('mmTotal').innerText = Number(data.mmAcumulado || 0).toFixed(1);
-      document.getElementById('mmHoy').innerText = Number(data.mmHoy || 0).toFixed(1);
-      document.getElementById('mm7').innerText = Number(data.mm7 || 0).toFixed(1);
-      document.getElementById('diasLluvia').innerText = data.diasLluvia || 0;
-      document.getElementById('timestamp').innerText = data.timestamp || "—";
+      // Detectar si el ESP sigue transmitiendo
+      // Se considera ONLINE si el ultimo envio tiene menos de 3 minutos
+      const ahora = Math.floor(Date.now() / 1000);
+      const epoch = Number(data.epoch || 0);
+      const online = epoch > 100000 && (ahora - epoch) < 180; // 3 minutos
 
-      const statusEl = document.getElementById('status');
-      statusEl.classList.remove('offline');
-      statusEl.innerText = "Sistema Online";
+      const statusEl = document.getElementById("status");
+      if (online) {
+        statusEl.classList.remove("offline");
+        statusEl.innerText = "Sistema Online";
 
-      const pct = Number(data.bateria || 0);
-      const batEl = document.getElementById('batteryLevel');
-      document.getElementById('batteryText').innerText = pct + "%";
-      batEl.style.width = pct + "%";
-      batEl.className = "battery-level " + (pct > 50 ? "ok" : pct > 20 ? "mid" : "low");
+        document.getElementById("mmTotal").innerText = Number(data.mmAcumulado || 0).toFixed(1);
+        document.getElementById("mmHoy").innerText = Number(data.mmHoy || 0).toFixed(1);
+        document.getElementById("mm7").innerText = Number(data.mm7 || 0).toFixed(1);
+        document.getElementById("diasLluvia").innerText = data.diasLluvia || 0;
+        document.getElementById("timestamp").innerText = data.timestamp || "—";
+
+        const pct = Number(data.bateria || 0);
+        const batEl = document.getElementById("batteryLevel");
+        document.getElementById("batteryText").innerText = pct + "%";
+        batEl.style.width = pct + "%";
+        batEl.className = "battery-level " + (pct > 50 ? "ok" : pct > 20 ? "mid" : "low");
+      } else {
+        statusEl.classList.add("offline");
+        statusEl.innerText = "Sistema fuera de línea";
+        document.getElementById("batteryText").innerText = "No disponible";
+        document.getElementById("batteryLevel").style.width = "0%";
+        document.getElementById("batteryLevel").className = "battery-level low";
+        // Se mantienen los ultimos valores de lluvia/timestamp si existen
+        if (data.timestamp) document.getElementById("timestamp").innerText = data.timestamp + " (último dato)";
+      }
 
       ultimoHistorial = data.historial || [];
-      miGrafico.data.labels = ultimoHistorial.map(h => h.fecha);
-      miGrafico.data.datasets[0].data = ultimoHistorial.map(h => h.mm);
+      // Para el grafico: ultimos 90 dias si hay muchos
+      const paraGrafico = ultimoHistorial.slice(-90);
+      miGrafico.data.labels = paraGrafico.map(h => {
+        // mostrar DD/MM en el grafico
+        const p = (h.fecha || "").split("/");
+        return p.length >= 2 ? (p[0] + "/" + p[1]) : (h.fecha || "-");
+      });
+      miGrafico.data.datasets[0].data = paraGrafico.map(h => h.mm);
       miGrafico.update("none");
     })
     .catch(err => {
       console.error(err);
       const statusEl = document.getElementById("status");
       statusEl.classList.add("offline");
-      statusEl.innerText = "Sin datos del sensor";
+      statusEl.innerText = "Sistema fuera de línea";
+      document.getElementById("batteryText").innerText = "No disponible";
+      document.getElementById("batteryLevel").style.width = "0%";
+      document.getElementById("batteryLevel").className = "battery-level low";
     });
 }
 
@@ -168,11 +192,13 @@ function descargarCSV() {
     alert("No hay datos para descargar todavía.");
     return;
   }
-  let csv = "Fecha,mm\n";
+  // Formato: Fecha DD/MM/AAAA, mm/dia, Acumulado
+  let csv = "Fecha,mm/dia,Acumulado\n";
   ultimoHistorial.forEach(h => {
-    if (h.fecha && h.fecha !== "-") {
-      csv += h.fecha + "," + Number(h.mm).toFixed(2) + "\n";
-    }
+    if (!h.fecha || h.fecha === "-") return;
+    const mm = Number(h.mm || 0).toFixed(2);
+    const acum = Number(h.acumulado != null ? h.acumulado : h.mm || 0).toFixed(2);
+    csv += h.fecha + "," + mm + "," + acum + "\n";
   });
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
