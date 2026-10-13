@@ -10,16 +10,16 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
 .header{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;padding:1rem 1.5rem;box-shadow:0 4px 20px rgba(14,165,233,.25)}
-.header-content{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.header-content{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .header-text h1{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
 .header-text p{opacity:.9;font-size:.9rem;margin-top:.2rem}
 .logo{height:144px;width:auto;border-radius:8px;background:rgba(255,255,255,.95);padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.container{max-width:900px;margin:0 auto;padding:1.25rem}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:1.5rem 0}
-.kpi{background:var(--card);border-radius:16px;padding:1.25rem;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid var(--border);text-align:center}
-.kpi .label{font-size:.8rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
-.kpi .value{font-size:1.9rem;font-weight:700;color:var(--primary-dark);margin:.35rem 0}
-.kpi .unit{font-size:.85rem;color:var(--muted)}
+.container{max-width:960px;margin:0 auto;padding:1.25rem}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin:1.5rem 0}
+.kpi{background:var(--card);border-radius:16px;padding:1.15rem;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid var(--border);text-align:center}
+.kpi .label{font-size:.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.kpi .value{font-size:1.7rem;font-weight:700;color:var(--primary-dark);margin:.3rem 0}
+.kpi .unit{font-size:.8rem;color:var(--muted)}
 .card{background:var(--card);border-radius:16px;padding:1.5rem;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid var(--border);margin-bottom:1.5rem}
 .card h2{font-size:1.15rem;font-weight:600;margin-bottom:1rem}
 .status-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;font-size:.9rem}
@@ -36,7 +36,13 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sa
 .btn{background:var(--danger);color:#fff;border:none;padding:.6rem 1.2rem;font-size:.9rem;font-weight:600;border-radius:10px;cursor:pointer}
 .btn-download{background:#059669}
 .btn-group{display:flex;gap:.6rem;flex-wrap:wrap}
-canvas{width:100%!important;max-height:340px}
+.chart-wrap{height:280px;position:relative}
+.stats-table{width:100%;border-collapse:collapse;font-size:.9rem}
+.stats-table th,.stats-table td{padding:.65rem .75rem;text-align:left;border-bottom:1px solid var(--border)}
+.stats-table th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.stats-table td:last-child,.stats-table th:last-child{text-align:right}
+.stats-table tr:last-child td{border-bottom:none;font-weight:700}
+.stats-table .mm-bar{display:inline-block;height:8px;border-radius:4px;background:var(--primary);vertical-align:middle;margin-right:.5rem}
 .footer{text-align:center;padding:1.5rem;font-size:.8rem;color:var(--muted)}
 @media(max-width:600px){.header-content{flex-direction:column;text-align:center}.logo{height:120px}.header-text h1{font-size:1.25rem}}
 </style>
@@ -48,78 +54,155 @@ canvas{width:100%!important;max-height:340px}
       <h1>Pluviómetro IoT</h1>
       <p>Estación Meteorológica · EET N° 3169 Campo Santo</p>
     </div>
-
-<img src="logo.png" alt="Descripción de la imagen" width="220" height="200">
+    <img src="logo.png" width="220" height="200" class="logo" alt="Logo EET 3169">
   </div>
 </div>
 <div class="container">
   <div class="status-bar">
     <div class="status-dot" id="status">Conectando...</div>
-    <div class="battery-wrap" id="batteryWrap" title="Nivel de la batería LiPo">
+    <div class="battery-wrap" title="Nivel de la batería LiPo">
       <span style="color:var(--muted);font-size:0.8rem;font-weight:600;">Batería</span>
       <div class="battery-icon"><div class="battery-level ok" id="batteryLevel" style="width:0%"></div></div>
       <span id="batteryText">--%</span>
     </div>
     <div style="color:var(--muted)" id="timestamp">—</div>
   </div>
+
   <div class="kpi-grid">
     <div class="kpi"><div class="label">Acumulado Total</div><div class="value" id="mmTotal">--</div><div class="unit">mm</div></div>
     <div class="kpi"><div class="label">Hoy</div><div class="value" id="mmHoy">--</div><div class="unit">mm</div></div>
-    <div class="kpi"><div class="label">Últimos 7 días</div><div class="value" id="mm7">--</div><div class="unit">mm</div></div>
+    <div class="kpi"><div class="label">Este mes</div><div class="value" id="mmMes">--</div><div class="unit">mm</div></div>
+    <div class="kpi"><div class="label">Este año</div><div class="value" id="mmAnio">--</div><div class="unit">mm</div></div>
     <div class="kpi"><div class="label">Días con lluvia</div><div class="value" id="diasLluvia">--</div><div class="unit">días</div></div>
   </div>
+
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.75rem">
-      <h2 style="margin:0">Histórico de Precipitación</h2>
+      <h2 style="margin:0">Histórico diario</h2>
       <div class="btn-group">
         <button class="btn btn-download" onclick="descargarCSV()">Descargar CSV</button>
       </div>
     </div>
-    <canvas id="graficoLluvia"></canvas>
+    <div class="chart-wrap"><canvas id="graficoLluvia"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>Acumulado mensual</h2>
+    <div class="chart-wrap"><canvas id="graficoMensual"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>Resumen por mes</h2>
+    <div style="overflow-x:auto">
+      <table class="stats-table">
+        <thead>
+          <tr><th>Mes</th><th>Días con lluvia</th><th>Máx. diario</th><th>Total</th></tr>
+        </thead>
+        <tbody id="tablaMensualBody">
+          <tr><td colspan="4" style="text-align:center;color:var(--muted)">Sin datos</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 <div class="footer">Desarrollado en la EET N° 3169 Galileo Galilei · Campo Santo</div>
 <script>
-// ========== CONFIGURACIÓN ==========
-// Pegá aquí la URL de lectura de tu bin en JSONBin.io
-// Ejemplo: https://api.jsonbin.io/v3/b/TU_BIN_ID/latest
 const DATA_URL = "https://api.jsonbin.io/v3/b/6acaa347ac6210605a2651a0/latest";
-// Si el bin es privado, poné la X-Access-Key (solo lectura). Si es público, dejá vacío.
+
 const READ_KEY = "$2a$10$XP.7O/sWbpykAFHrY4si1uLAjvUft3DcMkRTL6wnvO6.OJnh2bNAS";
-// ===================================
+
 
 let miGrafico = null;
+let graficoMensual = null;
 let ultimoHistorial = [];
 
-function inicializarGrafico() {
-  const ctx = document.getElementById('graficoLluvia').getContext('2d');
-  miGrafico = new Chart(ctx, {
+const MESES = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const MESES_LARGO = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+function parseFecha(f) {
+  if (!f || f === "-") return null;
+  const p = f.split("/");
+  if (p.length < 3) return null;
+  const d = parseInt(p[0], 10), m = parseInt(p[1], 10), a = parseInt(p[2], 10);
+  if (!d || !m || !a) return null;
+  return { d, m, a, key: a + "-" + String(m).padStart(2,"0") };
+}
+
+function calcularEstadisticas(historial) {
+  const ahora = new Date();
+  const mesActual = ahora.getMonth() + 1;
+  const anioActual = ahora.getFullYear();
+  let mmMes = 0, mmAnio = 0, mmMax = 0, diasLluvia = 0, sumaLluvia = 0;
+  const porMes = {};
+
+  historial.forEach(h => {
+    const pf = parseFecha(h.fecha);
+    if (!pf) return;
+    const mm = Number(h.mm) || 0;
+    if (pf.a === anioActual && pf.m === mesActual) mmMes += mm;
+    if (pf.a === anioActual) mmAnio += mm;
+    if (mm > mmMax) mmMax = mm;
+    if (mm > 0.05) { diasLluvia++; sumaLluvia += mm; }
+    if (!porMes[pf.key]) {
+      porMes[pf.key] = { total: 0, dias: 0, max: 0, anio: pf.a, mes: pf.m, label: MESES[pf.m] + " " + pf.a };
+    }
+    porMes[pf.key].total += mm;
+    if (mm > 0.05) porMes[pf.key].dias++;
+    if (mm > porMes[pf.key].max) porMes[pf.key].max = mm;
+  });
+
+  const promedio = diasLluvia > 0 ? (sumaLluvia / diasLluvia) : 0;
+  const mesesOrdenados = Object.keys(porMes).sort().map(k => porMes[k]);
+  return { mmMes, mmAnio, mmMax, diasLluvia, promedio, mesesOrdenados };
+}
+
+function inicializarGraficos() {
+  miGrafico = new Chart(document.getElementById('graficoLluvia').getContext('2d'), {
     type: 'bar',
-    data: {
-      labels: [],
-      datasets: [{
-        label: 'mm',
-        data: [],
-        backgroundColor: 'rgba(14,165,233,0.75)',
-        borderColor: 'rgba(2,132,199,1)',
-        borderWidth: 1,
-        borderRadius: 4,
-        borderSkipped: false
-      }]
-    },
+    data: { labels: [], datasets: [{ label: 'mm', data: [], backgroundColor: 'rgba(14,165,233,0.75)', borderColor: 'rgba(2,132,199,1)', borderWidth: 1, borderRadius: 4, borderSkipped: false }] },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8 }
-      },
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8 } },
       scales: {
         x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 }, color: '#64748b' } },
         y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 11 }, color: '#64748b' }, title: { display: true, text: 'mm', color: '#64748b' } }
       }
     }
   });
+
+  graficoMensual = new Chart(document.getElementById('graficoMensual').getContext('2d'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'mm/mes', data: [], backgroundColor: 'rgba(16,185,129,0.75)', borderColor: 'rgba(5,150,105,1)', borderWidth: 1, borderRadius: 6, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8, callbacks: { label: c => c.parsed.y.toFixed(1) + ' mm' } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#64748b' } },
+        y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { font: { size: 11 }, color: '#64748b' }, title: { display: true, text: 'mm', color: '#64748b' } }
+      }
+    }
+  });
+}
+
+function actualizarTablaMensual(meses) {
+  const tbody = document.getElementById('tablaMensualBody');
+  if (!meses.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted)">Sin datos</td></tr>';
+    return;
+  }
+  const maxTotal = Math.max(...meses.map(m => m.total), 1);
+  let html = '', totalGeneral = 0;
+  meses.slice().reverse().forEach(m => {
+    totalGeneral += m.total;
+    const w = Math.max(8, Math.round((m.total / maxTotal) * 100));
+    html += '<tr><td>' + MESES_LARGO[m.mes] + ' ' + m.anio + '</td><td>' + m.dias + '</td><td>' + m.max.toFixed(1) + ' mm</td>';
+    html += '<td><span class="mm-bar" style="width:' + w + 'px"></span>' + m.total.toFixed(1) + ' mm</td></tr>';
+  });
+  html += '<tr><td>Total período</td><td colspan="2"></td><td>' + totalGeneral.toFixed(1) + ' mm</td></tr>';
+  tbody.innerHTML = html;
 }
 
 function actualizarDatos() {
@@ -127,33 +210,26 @@ function actualizarDatos() {
   if (READ_KEY) headers["X-Access-Key"] = READ_KEY;
 
   fetch(DATA_URL, { headers })
-    .then(r => {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then(payload => {
       const data = payload.record || payload;
-
-      // Detectar si el ESP sigue transmitiendo
-      // Se considera ONLINE si el ultimo envio tiene menos de 3 minutos
       const ahora = Math.floor(Date.now() / 1000);
       const epoch = Number(data.epoch || 0);
-      const online = epoch > 100000 && (ahora - epoch) < 180; // 3 minutos
-
+      const online = epoch > 100000 && (ahora - epoch) < 180;
       const statusEl = document.getElementById("status");
+
+      ultimoHistorial = data.historial || [];
+      const stats = calcularEstadisticas(ultimoHistorial);
+
       if (online) {
         statusEl.classList.remove("offline");
         statusEl.innerText = "Sistema Online";
-
         document.getElementById("mmTotal").innerText = Number(data.mmAcumulado || 0).toFixed(1);
         document.getElementById("mmHoy").innerText = Number(data.mmHoy || 0).toFixed(1);
-        document.getElementById("mm7").innerText = Number(data.mm7 || 0).toFixed(1);
-        document.getElementById("diasLluvia").innerText = data.diasLluvia || 0;
         document.getElementById("timestamp").innerText = data.timestamp || "—";
-
         const pct = Number(data.bateria || 0);
-        const batEl = document.getElementById("batteryLevel");
         document.getElementById("batteryText").innerText = pct + "%";
+        const batEl = document.getElementById("batteryLevel");
         batEl.style.width = pct + "%";
         batEl.className = "battery-level " + (pct > 50 ? "ok" : pct > 20 ? "mid" : "low");
       } else {
@@ -162,26 +238,33 @@ function actualizarDatos() {
         document.getElementById("batteryText").innerText = "No disponible";
         document.getElementById("batteryLevel").style.width = "0%";
         document.getElementById("batteryLevel").className = "battery-level low";
-        // Se mantienen los ultimos valores de lluvia/timestamp si existen
         if (data.timestamp) document.getElementById("timestamp").innerText = data.timestamp + " (último dato)";
+        if (data.mmAcumulado != null) document.getElementById("mmTotal").innerText = Number(data.mmAcumulado).toFixed(1);
+        if (data.mmHoy != null) document.getElementById("mmHoy").innerText = Number(data.mmHoy).toFixed(1);
       }
 
-      ultimoHistorial = data.historial || [];
-      // Para el grafico: ultimos 90 dias si hay muchos
+      document.getElementById("mmMes").innerText = stats.mmMes.toFixed(1);
+      document.getElementById("mmAnio").innerText = stats.mmAnio.toFixed(1);
+      document.getElementById("diasLluvia").innerText = stats.diasLluvia || data.diasLluvia || 0;
+
       const paraGrafico = ultimoHistorial.slice(-90);
       miGrafico.data.labels = paraGrafico.map(h => {
-        // mostrar DD/MM en el grafico
         const p = (h.fecha || "").split("/");
         return p.length >= 2 ? (p[0] + "/" + p[1]) : (h.fecha || "-");
       });
       miGrafico.data.datasets[0].data = paraGrafico.map(h => h.mm);
       miGrafico.update("none");
+
+      graficoMensual.data.labels = stats.mesesOrdenados.map(m => m.label);
+      graficoMensual.data.datasets[0].data = stats.mesesOrdenados.map(m => Number(m.total.toFixed(1)));
+      graficoMensual.update("none");
+
+      actualizarTablaMensual(stats.mesesOrdenados);
     })
     .catch(err => {
       console.error(err);
-      const statusEl = document.getElementById("status");
-      statusEl.classList.add("offline");
-      statusEl.innerText = "Sistema fuera de línea";
+      document.getElementById("status").classList.add("offline");
+      document.getElementById("status").innerText = "Sistema fuera de línea";
       document.getElementById("batteryText").innerText = "No disponible";
       document.getElementById("batteryLevel").style.width = "0%";
       document.getElementById("batteryLevel").className = "battery-level low";
@@ -189,31 +272,23 @@ function actualizarDatos() {
 }
 
 function descargarCSV() {
-  if (!ultimoHistorial.length) {
-    alert("No hay datos para descargar todavía.");
-    return;
-  }
-  // Formato: Fecha DD/MM/AAAA, mm/dia, Acumulado
+  if (!ultimoHistorial.length) { alert("No hay datos para descargar todavía."); return; }
   let csv = "Fecha,mm/dia,Acumulado\n";
   ultimoHistorial.forEach(h => {
     if (!h.fecha || h.fecha === "-") return;
-    const mm = Number(h.mm || 0).toFixed(2);
-    const acum = Number(h.acumulado != null ? h.acumulado : h.mm || 0).toFixed(2);
-    csv += h.fecha + "," + mm + "," + acum + "\n";
+    csv += h.fecha + "," + Number(h.mm || 0).toFixed(2) + "," + Number(h.acumulado != null ? h.acumulado : h.mm || 0).toFixed(2) + "\n";
   });
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = "pluviometro_eet3169.csv";
-  a.click();
+  a.href = url; a.download = "pluviometro_eet3169.csv"; a.click();
   URL.revokeObjectURL(url);
 }
 
 window.onload = function () {
-  inicializarGrafico();
+  inicializarGraficos();
   actualizarDatos();
-  setInterval(actualizarDatos, 10000); // cada 10 s
+  setInterval(actualizarDatos, 10000);
 };
 </script>
 </body>
